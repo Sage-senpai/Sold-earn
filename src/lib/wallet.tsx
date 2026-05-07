@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { env } from './env';
 import type { UserRole, WalletProvider } from './types';
 
 type Wallet = {
@@ -61,9 +62,13 @@ async function connectProvider(provider: WalletProvider, manualAddress?: string)
   }
 
   if (provider === 'embedded') {
-    // PRIVY: drop in `usePrivy()` + `useSolanaWallets()` hooks here once
-    // NEXT_PUBLIC_PRIVY_APP_ID is set. For now we mint a deterministic
-    // local "embedded" wallet so the rest of the flow can be exercised.
+    // PRIVY: when `env.privy.enabled`, drop in `usePrivy()` + `useSolanaWallets()`
+    // hooks here. For now we mint a deterministic local "embedded" wallet so
+    // the rest of the flow can be exercised without API keys.
+    if (env.privy.enabled) {
+      // PRIVY: real login goes here — return { address, provider: 'embedded' }.
+      console.warn('[wallet] PRIVY app id detected but real login not yet wired — falling back to local mock.');
+    }
     const stored = window.localStorage.getItem('earn.embeddedAddress');
     const address =
       stored ?? `EMB${Math.random().toString(36).slice(2, 6).toUpperCase()}${Date.now().toString(36).slice(-4).toUpperCase()}`;

@@ -8,10 +8,16 @@ The product feel target is **the final evolution of Superteam Earn** — extensi
 
 ```
 npm install
+cp .env.example .env.local   # fill in keys as needed (all optional for the scaffold)
 npm run dev
 ```
 
 Dev server: http://localhost:3001 (sold-main runs on 3000).
+
+The scaffold runs with **no env vars set** — every external integration
+(Privy, RPC, Anchor program, Metaplex collection) gracefully falls back to a
+local stub. See `.env.example` for what to fill in when each piece goes real;
+`src/lib/env.ts` is the single typed read surface.
 
 ## What's stubbed
 
