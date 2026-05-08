@@ -124,13 +124,26 @@ body {
     clip-path: polygon(50% 0, 94% 23%, 94% 77%, 50% 100%, 6% 77%, 6% 23%);
     box-shadow: inset 0 0 0 22px rgba(255, 255, 255, 0.36), inset 0 0 70px rgba(15, 110, 86, 0.1);
     animation: earn-drift 28s ease-in-out infinite reverse;
+    pointer-events: none;
+  }
+
+  @media (max-width: 639px) {
+    .sigil-field {
+      display: none;
+    }
   }
 
   .section-shell {
     position: relative;
     z-index: 1;
-    width: min(1180px, calc(100% - 32px));
+    width: min(1180px, calc(100% - 24px));
     margin-inline: auto;
+  }
+
+  @media (min-width: 640px) {
+    .section-shell {
+      width: min(1180px, calc(100% - 32px));
+    }
   }
 
   .ink-panel {
@@ -285,4 +298,50 @@ body {
   .appear { animation: earn-enter 520ms ease both; }
   .slide-x { animation: earn-slide-x 380ms ease both; }
   .fade-in { animation: earn-fade 420ms ease both; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--earn-ink);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--earn-ink);
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+
+  .pill:hover {
+    background: rgba(168, 214, 197, 0.45);
+  }
+
+  .pill-active {
+    background: var(--earn-accent);
+    color: var(--earn-white);
+    border-color: var(--earn-accent);
+  }
+
+  .pill-active:hover {
+    background: var(--earn-accent);
+  }
+}
+
+@media (max-width: 639px) {
+  /* keep ink-panel notched corners but loosen shadow on phones */
+  .ink-panel {
+    box-shadow: 8px 10px 0 rgba(0, 0, 0, 0.88);
+  }
+  .ink-card {
+    box-shadow: 6px 7px 0 rgba(0, 0, 0, 0.85);
+  }
+  .ink-card:hover {
+    transform: none;
+    box-shadow: 6px 7px 0 rgba(0, 0, 0, 0.85);
+  }
 }

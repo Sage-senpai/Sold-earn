@@ -1,37 +1,108 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useWallet } from '@/lib/wallet';
 import WalletButton from './WalletButton';
 
 export default function Nav() {
   const { role } = useWallet();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   return (
-    <nav className="section-shell sticky top-4 z-50 pt-4">
-      <div className="ink-panel flex items-center justify-between gap-3 px-4 py-3 md:px-6">
-        <Link href="/" className="font-eldritch text-xl font-bold">
-          SOLd · Earn
+    <nav className="section-shell sticky top-3 sm:top-4 z-[60] pt-3 sm:pt-4">
+      <div className="ink-panel flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5 sm:py-3 md:px-6">
+        <Link href="/" className="font-eldritch text-base sm:text-lg md:text-xl font-bold whitespace-nowrap">
+          SOLd · <span className="text-earn-accent">Earn</span>
         </Link>
-        <div className="hidden items-center gap-3 md:flex">
-          <Link href="/scout/bounties" className="font-mono text-xs uppercase hover:text-earn-accent">
-            Bounties
-          </Link>
+
+        <div className="hidden lg:flex items-center gap-5">
+          <NavLink href="/scout/bounties">Bounties</NavLink>
+          {role === 'vendor' && <NavLink href="/vendor/dashboard">Vendor</NavLink>}
+          {role === 'scout' && <NavLink href="/scout/dashboard">Scout</NavLink>}
+          <NavLink href="/scout/leaderboard">Leaderboard</NavLink>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:block">
+            <WalletButton size="sm" />
+          </div>
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="lg:hidden inline-flex items-center justify-center w-10 h-10 border border-earn-gray-900 bg-white/80 hover:bg-white"
+          >
+            <span className="sr-only">Menu</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              {open ? (
+                <path d="M3 3 L15 15 M15 3 L3 15" stroke="currentColor" strokeWidth="1.6" />
+              ) : (
+                <path d="M2 5 H16 M2 9 H16 M2 13 H16" stroke="currentColor" strokeWidth="1.6" />
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="lg:hidden mt-2 ink-panel p-4 flex flex-col gap-2 fade-in">
+          <MobileLink href="/scout/bounties" onClick={() => setOpen(false)}>Bounties</MobileLink>
           {role === 'vendor' && (
-            <Link href="/vendor/dashboard" className="font-mono text-xs uppercase hover:text-earn-accent">
-              Vendor
-            </Link>
+            <MobileLink href="/vendor/dashboard" onClick={() => setOpen(false)}>Vendor Dashboard</MobileLink>
           )}
           {role === 'scout' && (
-            <Link href="/scout/dashboard" className="font-mono text-xs uppercase hover:text-earn-accent">
-              Scout
-            </Link>
+            <MobileLink href="/scout/dashboard" onClick={() => setOpen(false)}>Scout Dashboard</MobileLink>
           )}
-          <Link href="/scout/leaderboard" className="font-mono text-xs uppercase hover:text-earn-accent">
-            Leaderboard
-          </Link>
+          <MobileLink href="/scout/leaderboard" onClick={() => setOpen(false)}>Leaderboard</MobileLink>
+          <MobileLink href="/vendor/signup" onClick={() => setOpen(false)}>Become a Vendor</MobileLink>
+          <MobileLink href="/scout/signup" onClick={() => setOpen(false)}>Become a Scout</MobileLink>
+          <div className="pt-2 sm:hidden">
+            <WalletButton size="sm" />
+          </div>
         </div>
-        <WalletButton size="sm" />
-      </div>
+      )}
     </nav>
+  );
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="font-mono text-[11px] uppercase tracking-wider hover:text-earn-accent transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MobileLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="block border-l-2 border-transparent hover:border-earn-accent pl-3 py-2 font-mono text-xs uppercase tracking-wider hover:text-earn-accent"
+    >
+      {children}
+    </Link>
   );
 }

@@ -34,17 +34,17 @@ export default function LeaderboardPage() {
       <div className="nascent-bg" aria-hidden="true" />
       <Nav />
 
-      <section className="section-shell relative z-10 py-10 appear">
+      <section className="section-shell relative z-10 py-8 sm:py-10 appear">
         <p className="font-mono text-[10px] uppercase text-earn-gray-600">Protocol-wide</p>
-        <h1 className="font-eldritch text-3xl font-bold md:text-4xl mb-6">Top Scouts</h1>
+        <h1 className="font-eldritch text-2xl sm:text-3xl md:text-4xl font-bold mb-6">Top Scouts</h1>
 
         {rows.length === 0 ? (
           <div className="ink-card p-8 text-center text-earn-gray-700">
             No verified sales yet — be the first.
           </div>
         ) : (
-          <div className="ink-panel p-2">
-            <table className="w-full">
+          <div className="ink-panel p-2 overflow-x-auto">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="text-left">
                   <Th>#</Th>

@@ -66,7 +66,7 @@ export default function ApplyDialog({
           Active-application cap is 10. Once you fill it, you must verify or rotate one out before applying again.
         </p>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
           <button className="btn-secondary text-xs" onClick={onClose} disabled={busy}>
             Cancel
           </button>

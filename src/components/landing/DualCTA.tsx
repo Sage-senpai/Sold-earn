@@ -9,11 +9,11 @@ export default function DualCTA() {
   const [hover, setHover] = useState<Side>(null);
 
   return (
-    <section id="paths" className="section-shell relative z-10 pb-24 pt-4 appear">
-      <div className="mb-8 flex items-end justify-between">
+    <section id="paths" className="section-shell relative z-10 pb-16 sm:pb-24 pt-4 appear">
+      <div className="mb-6 sm:mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase text-earn-gray-600">Two paths · One protocol</p>
-          <h2 className="font-eldritch text-3xl font-bold md:text-5xl">Need sales, or drive them?</h2>
+          <h2 className="font-eldritch text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">Need sales, or drive them?</h2>
         </div>
         <p className="hidden font-mono text-[10px] uppercase text-earn-gray-600 md:block">
           Choose a side · animated
@@ -81,9 +81,9 @@ function Card({
       href={href}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={`ink-card group relative block p-7 md:p-9 transition-all duration-300 ${
-        active ? 'translate-y-[-6px]' : ''
-      } ${dimmed ? 'opacity-60' : ''}`}
+      className={`ink-card group relative block p-6 sm:p-7 md:p-9 transition-all duration-300 ${
+        active ? 'md:translate-y-[-6px]' : ''
+      } ${dimmed ? 'md:opacity-60' : ''}`}
       style={{ transitionProperty: 'transform, box-shadow, opacity' }}
     >
       <div className="flex items-start justify-between gap-4">
@@ -98,7 +98,7 @@ function Card({
         </span>
       </div>
 
-      <h3 className="font-eldritch mt-6 text-3xl font-bold leading-tight md:text-4xl">{title}</h3>
+      <h3 className="font-eldritch mt-6 text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">{title}</h3>
       <div className="rune-rule my-5" />
       <p className="text-sm text-earn-gray-700 md:text-base">{blurb}</p>
 

@@ -42,14 +42,14 @@ export default function VendorBountyDetail() {
       <div className="nascent-bg" aria-hidden="true" />
       <Nav />
 
-      <section className="section-shell relative z-10 py-10 appear">
+      <section className="section-shell relative z-10 py-8 sm:py-10 appear">
         <Link href="/vendor/dashboard" className="font-mono text-[10px] uppercase text-earn-gray-600 hover:text-earn-accent">
           ← All bounties
         </Link>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-eldritch text-3xl font-bold md:text-4xl">{bounty.title}</h1>
-            <p className="mt-2 max-w-2xl text-earn-gray-700">{bounty.description}</p>
+          <div className="min-w-0">
+            <h1 className="font-eldritch text-2xl sm:text-3xl md:text-4xl font-bold break-words">{bounty.title}</h1>
+            <p className="mt-2 max-w-2xl text-earn-gray-700 text-sm sm:text-base">{bounty.description}</p>
           </div>
           <button
             className="btn-secondary text-xs"
@@ -62,7 +62,7 @@ export default function VendorBountyDetail() {
           </button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4 my-8">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4 my-8">
           <Stat label="Reward / Sale" value={`${bounty.rewardAmount} ${bounty.rewardToken}`} />
           <Stat label="Target" value={bounty.targetSales.toString()} />
           <Stat label="Verified" value={`${verified} / ${bounty.targetSales}`} />
@@ -106,13 +106,13 @@ export default function VendorBountyDetail() {
                   .filter((s) => s.status === 'pending')
                   .map((s) => (
                     <li key={s.id} className="border border-earn-gray-200 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-mono text-xs font-bold">{s.salesId}</p>
-                          <p className="text-xs mt-1">{s.buyerNote}</p>
-                          <p className="font-mono text-[10px] uppercase text-earn-gray-500 mt-1">tx: {s.txHash}</p>
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-mono text-xs font-bold break-all">{s.salesId}</p>
+                          <p className="text-xs mt-1 break-words">{s.buyerNote}</p>
+                          <p className="font-mono text-[10px] uppercase text-earn-gray-500 mt-1 break-all">tx: {s.txHash}</p>
                         </div>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex sm:flex-col gap-1 shrink-0">
                           <button
                             className="btn-accent text-[10px] px-3 py-1"
                             onClick={() => {
@@ -148,8 +148,8 @@ export default function VendorBountyDetail() {
           ) : (
             <ul className="space-y-1">
               {applications.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-2 font-mono text-xs">
-                  <span>{a.salesId}</span>
+                <li key={a.id} className="flex items-center justify-between gap-2 font-mono text-xs flex-wrap">
+                  <span className="break-all">{a.salesId}</span>
                   <span className="text-earn-gray-600">{a.scoutAddress.slice(0, 8)}…</span>
                 </li>
               ))}

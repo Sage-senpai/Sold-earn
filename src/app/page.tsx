@@ -13,8 +13,9 @@ export default function Home() {
       <DualCTA />
 
       <footer className="section-shell relative z-10 pb-10 pt-2">
-        <div className="border-t border-earn-gray-900 pt-6 flex justify-between items-center font-mono text-xs uppercase">
+        <div className="border-t border-earn-gray-900 pt-6 flex flex-wrap justify-between items-center gap-2 font-mono text-[10px] sm:text-xs uppercase">
           <span>SOLd · Earn</span>
+          <span className="text-earn-gray-600">A bounty arm of the SOLd. protocol</span>
           <span>v0.1 · scaffold</span>
         </div>
       </footer>

@@ -94,7 +94,7 @@ export default function HoldBountyDialog({
           <label className="field-label">Short brief / bio</label>
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="field-input min-h-[88px]" placeholder="Who can sell this, expected pitch angle, what counts as a verified sale." />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="field-label">Product kind</label>
             <select value={productKind} onChange={(e) => setProductKind(e.target.value as Bounty['productKind'])} className="field-input">
@@ -108,7 +108,7 @@ export default function HoldBountyDialog({
             <input value={productName} onChange={(e) => setProductName(e.target.value)} className="field-input" />
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <label className="field-label">Reward / sale</label>
             <input type="number" min={1} value={reward} onChange={(e) => setReward(Number(e.target.value))} className="field-input" />
@@ -140,7 +140,7 @@ export default function HoldBountyDialog({
           </p>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
           <button className="btn-secondary text-xs" onClick={onClose} disabled={busy}>
             Cancel
           </button>

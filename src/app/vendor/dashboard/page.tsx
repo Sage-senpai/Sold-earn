@@ -18,14 +18,14 @@ export default function VendorDashboard() {
       <div className="nascent-bg" aria-hidden="true" />
       <Nav />
 
-      <section className="section-shell relative z-10 py-10 appear">
+      <section className="section-shell relative z-10 py-8 sm:py-10 appear">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-          <div>
+          <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase text-earn-gray-600">Vendor Dashboard</p>
-            <h1 className="font-eldritch text-3xl font-bold md:text-4xl">{vendor?.brandName ?? 'Your Brand'}</h1>
+            <h1 className="font-eldritch text-2xl sm:text-3xl md:text-4xl font-bold break-words">{vendor?.brandName ?? 'Your Brand'}</h1>
             <p className="mt-1 text-earn-gray-700 text-sm max-w-xl">{vendor?.bio ?? 'Set up your vendor profile to publish bounties.'}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href="/vendor/signup" className="btn-secondary text-xs">
               Edit Profile
             </Link>
@@ -35,7 +35,7 @@ export default function VendorDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 mb-8">
           <Stat label="Active Bounties" value={bounties.filter((b) => b.status === 'active').length.toString()} />
           <Stat label="Total Escrow" value={`$${bounties.reduce((a, b) => a + b.escrowDeposited, 0).toLocaleString()}`} />
           <Stat label="Bounties Held" value={bounties.length.toString()} />

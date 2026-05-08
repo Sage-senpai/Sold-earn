@@ -67,12 +67,12 @@ export default function ScoutDashboard() {
       <div className="nascent-bg" aria-hidden="true" />
       <Nav />
 
-      <section className="section-shell relative z-10 py-10 appear">
+      <section className="section-shell relative z-10 py-8 sm:py-10 appear">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
-          <div>
+          <div className="min-w-0">
             <p className="font-mono text-[10px] uppercase text-earn-gray-600">Scout Dashboard</p>
-            <h1 className="font-eldritch text-3xl font-bold md:text-4xl">{scout.displayName}</h1>
-            <p className="font-mono text-[10px] uppercase text-earn-gray-600 mt-1">SBT · {scout.sbtMint}</p>
+            <h1 className="font-eldritch text-2xl sm:text-3xl md:text-4xl font-bold break-words">{scout.displayName}</h1>
+            <p className="font-mono text-[10px] uppercase text-earn-gray-600 mt-1 break-all">SBT · {scout.sbtMint}</p>
           </div>
           <div className="flex gap-2">
             <Link href="/scout/bounties" className="btn-secondary text-xs">
@@ -81,7 +81,7 @@ export default function ScoutDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4 mb-6">
           <Stat label="Total Earned" value={`${scout.totalEarned.toLocaleString()} USDC`} />
           <Stat label="Verified Sales" value={sales.filter((s) => s.status === 'verified').length.toString()} />
           <Stat label="Active Apps" value={`${openCount} / ${APPLICATION_CAP_VALUE}`} />
@@ -94,7 +94,7 @@ export default function ScoutDashboard() {
               <h2 className="font-eldritch text-xl font-bold">My Bounties</h2>
               {apps.length > 1 && (
                 <select
-                  className="field-input text-xs max-w-[60%]"
+                  className="field-input text-xs max-w-[60%] truncate"
                   value={activeApp?.id}
                   onChange={(e) => setActiveAppId(e.target.value)}
                 >
@@ -117,13 +117,13 @@ export default function ScoutDashboard() {
               </p>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <Mini label="Bounty" value={activeApp.bountyTitle} />
                   <Mini label="Sales ID" value={activeApp.salesId} mono />
                   <Mini label="Reward" value={`${activeBounty?.rewardAmount ?? '?'} ${activeBounty?.rewardToken ?? ''}`} />
                   <Mini label="Sales Link" value={`/sale/${activeApp.salesId}`} mono />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button className="btn-accent text-xs" onClick={onLogSale}>
                     Log a sale
                   </button>
