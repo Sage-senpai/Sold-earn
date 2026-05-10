@@ -16,6 +16,7 @@ import {
 import Modal from '@/components/Modal';
 import AgentSuggestion from '@/components/AgentSuggestion';
 import EscrowAdvisor from '@/components/EscrowAdvisor';
+import EscrowDepositCard from '@/components/EscrowDepositCard';
 import FunnelPanel from '@/components/FunnelPanel';
 import { useVerifierSuggestions } from '@/lib/hooks/useVerifierSuggestions';
 import { adviseEscrow } from '@/lib/agents/escrowAdvisor';
@@ -150,6 +151,10 @@ export default function VendorBountyDetail() {
             setTopUpOpen(true);
           }}
         />
+
+        <div className="mt-6">
+          <EscrowDepositCard bountyId={bounty.id} rewardToken={bounty.rewardToken} />
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2 mt-6">
           <div className="ink-panel p-6">

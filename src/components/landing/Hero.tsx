@@ -41,14 +41,15 @@ export default function Hero() {
         <div>
           <div className="glyph-badge mb-5 sm:mb-6">Decentralized Sales Guild · Solana</div>
           <h1 className="shadow-word font-eldritch text-[2.5rem] leading-[1.05] sm:text-5xl md:text-6xl lg:text-7xl font-bold">
-            Sales,
+            Off-chain sales,
             <br />
-            <span className="text-earn-accent">on-chain.</span>
+            <span className="text-earn-accent">on-chain rails.</span>
           </h1>
           <div className="rune-rule my-6 sm:my-8" />
           <p className="max-w-xl text-sm sm:text-base md:text-lg text-earn-gray-700">
-            Vendors hold bounties in escrow. Scouts mint a soulbound identity, generate a Sales ID, and earn 100% of the
-            reward on every verified sale — paid the moment the chain confirms.
+            Vendors sell globally to local audiences. Sales drivers sell locally for global projects.
+            Bounties lock in escrow, identities are soulbound, and the full reward lands the moment
+            the chain confirms.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#paths" className="btn-accent">

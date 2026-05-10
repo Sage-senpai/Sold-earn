@@ -13,10 +13,12 @@ export default function DualCTA() {
       <div className="mb-6 sm:mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase text-earn-gray-600">Two paths · One protocol</p>
-          <h2 className="font-eldritch text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">Need sales, or drive them?</h2>
+          <h2 className="font-eldritch text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+            Off-chain sales for on-chain products and services.
+          </h2>
         </div>
         <p className="hidden font-mono text-[10px] uppercase text-earn-gray-600 md:block">
-          Choose a side · animated
+          Open the book · pick a side
         </p>
       </div>
 
@@ -27,10 +29,12 @@ export default function DualCTA() {
           dimmed={hover === 'scout'}
           onEnter={() => setHover('vendor')}
           onLeave={() => setHover(null)}
-          eyebrow="Need sales"
+          spineSide="right"
+          header="Need Sales?"
+          eyebrow="Vendor"
           title="Sign up as a Vendor"
-          blurb="Hold a bounty, lock escrow, watch a guild of scouts move your product."
-          bullets={['Brand profile + multi-bounty dashboard', 'Escrow on-chain — refunded on cancel', 'Live leaderboard of selling scouts']}
+          blurb="Sell globally to local audiences, without local middlemen."
+          bullets={['Brand profile + multi-bounty dashboard', 'Escrow on-chain — refunded on cancel', 'Live leaderboard of selling drivers']}
           href="/vendor/signup"
           accent
         />
@@ -40,9 +44,11 @@ export default function DualCTA() {
           dimmed={hover === 'vendor'}
           onEnter={() => setHover('scout')}
           onLeave={() => setHover(null)}
-          eyebrow="Drive sales"
-          title="Sign up as a Scout"
-          blurb="Mint a Soulbound ID. Generate a Sales ID per bounty. Earn the full reward — instantly."
+          spineSide="left"
+          header="Drive Sales?"
+          eyebrow="Sales Driver"
+          title="Sign up as a Sales Driver"
+          blurb="Sell locally, for global projects and businesses."
           bullets={['SBT-bound identity, no impersonation', 'Per-bounty performance dashboard', '10-application cap keeps quality high']}
           href="/scout/signup"
         />
@@ -57,24 +63,30 @@ function Card({
   dimmed,
   onEnter,
   onLeave,
+  header,
   eyebrow,
   title,
   blurb,
   bullets,
   href,
   accent,
+  spineSide,
 }: {
   side: Side;
   active: boolean;
   dimmed: boolean;
   onEnter: () => void;
   onLeave: () => void;
+  header: string;
   eyebrow: string;
   title: string;
   blurb: string;
   bullets: string[];
   href: string;
   accent?: boolean;
+  // Which edge of the card sits against the "spine" of the book. The vendor
+  // card's spine is on its right; the driver card's is on its left.
+  spineSide: 'left' | 'right';
 }) {
   return (
     <Link
@@ -86,6 +98,12 @@ function Card({
       } ${dimmed ? 'md:opacity-60' : ''}`}
       style={{ transitionProperty: 'transform, box-shadow, opacity' }}
     >
+      {/* Big section header — "Need Sales?" / "Drive Sales?" */}
+      <h2 className="font-eldritch text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
+        {header}
+      </h2>
+      <div className="rune-rule my-4" />
+
       <div className="flex items-start justify-between gap-4">
         <span
           className={`glyph-badge ${accent ? 'glyph-badge-accent' : ''}`}
@@ -98,18 +116,39 @@ function Card({
         </span>
       </div>
 
-      <h3 className="font-eldritch mt-6 text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">{title}</h3>
-      <div className="rune-rule my-5" />
-      <p className="text-sm text-earn-gray-700 md:text-base">{blurb}</p>
+      <h3 className="font-eldritch mt-6 text-xl sm:text-2xl md:text-3xl font-bold leading-tight">
+        {title}
+      </h3>
+      <p className="mt-3 text-sm text-earn-gray-700 md:text-base">{blurb}</p>
 
       <ul className="mt-5 space-y-2">
         {bullets.map((b) => (
-          <li key={b} className="flex items-start gap-2 font-mono text-[11px] uppercase text-earn-gray-700">
+          <li
+            key={b}
+            className="flex items-start gap-2 font-mono text-[11px] uppercase text-earn-gray-700"
+          >
             <span className={accent ? 'text-earn-accent' : 'text-earn-ink'}>◆</span>
             <span>{b}</span>
           </li>
         ))}
       </ul>
+
+      {/* Book-spine: a soft inner shadow + thin rule on the edge that faces
+          the centre of the layout, so the two cards read as facing pages. */}
+      <div
+        aria-hidden
+        className={`hidden md:block pointer-events-none absolute inset-y-0 ${
+          spineSide === 'right' ? 'right-0' : 'left-0'
+        } w-3`}
+        style={{
+          background:
+            spineSide === 'right'
+              ? 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)'
+              : 'linear-gradient(to right, rgba(0,0,0,0.06), transparent)',
+          borderRight: spineSide === 'right' ? '1px solid rgba(0,0,0,0.08)' : undefined,
+          borderLeft: spineSide === 'left' ? '1px solid rgba(0,0,0,0.08)' : undefined,
+        }}
+      />
 
       <div
         aria-hidden

@@ -172,6 +172,65 @@ export async function closeBountyEscrow(
   return { txHash: tx };
 }
 
+// Returns the deterministic vault PDA for a bounty so vendors can fund
+// escrow by sending USDC from any wallet/exchange — no signing through
+// our UI required. The PDA address is computable client-side from the
+// bounty id alone; we only need a Connection to check whether the vault
+// has been initialized on-chain yet.
+//
+// status flags:
+//   'mock'    — NEXT_PUBLIC_ESCROW_PROGRAM_ID unset; whole escrow path
+//               is stubbed. The vault address shown is purely informational.
+//   'pending' — program deployed, but the vault PDA has no account info yet.
+//               Vendor must sign the initialise-and-deposit tx once before
+//               the address can receive USDC.
+//   'live'    — program deployed AND the vault PDA exists on-chain. Any
+//               wallet can transfer USDC into it.
+export type EscrowVaultInfo = {
+  status: 'mock' | 'pending' | 'live';
+  vaultAddress: string | null;
+  bountyAddress: string | null;
+  mintAddress: string | null;
+  network: string;
+};
+
+export async function getEscrowVaultInfo(bountyId: string): Promise<EscrowVaultInfo> {
+  const network = (process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? 'devnet') as string;
+  if (!isReady()) {
+    return { status: 'mock', vaultAddress: null, bountyAddress: null, mintAddress: null, network };
+  }
+  const seedBytes = bountySeedBytes(bountyId);
+  const [bountyPda] = bountyPdaForSeed(seedBytes);
+  const [vaultPda] = vaultPdaForBounty(bountyPda);
+  const vaultStr = vaultPda.toBase58();
+  const bountyStr = bountyPda.toBase58();
+  const mintStr = USDC_MINT!.toBase58();
+
+  // Check whether the vault token account has been created. If not, vendors
+  // can't yet receive USDC at this address.
+  try {
+    const conn = getConnection();
+    const acct = await conn.getAccountInfo(vaultPda);
+    return {
+      status: acct ? 'live' : 'pending',
+      vaultAddress: vaultStr,
+      bountyAddress: bountyStr,
+      mintAddress: mintStr,
+      network,
+    };
+  } catch {
+    // RPC failure shouldn't block the UI — surface as pending with the
+    // computed address so the vendor can still see what to fund.
+    return {
+      status: 'pending',
+      vaultAddress: vaultStr,
+      bountyAddress: bountyStr,
+      mintAddress: mintStr,
+      network,
+    };
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Internals
 // ─────────────────────────────────────────────────────────────────────────
