@@ -2,11 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Nav from '@/components/Nav';
 import WalletButton from '@/components/WalletButton';
 import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/lib/toast';
 import { upsertVendor, useVendor } from '@/lib/store';
+
+const DevnetFundCard = dynamic(() => import('@/components/DevnetFundCard'), { ssr: false });
 
 export default function VendorSignup() {
   const router = useRouter();
@@ -81,6 +84,12 @@ export default function VendorSignup() {
             </div>
           )}
         </div>
+
+        {wallet && (
+          <div className="max-w-2xl mx-auto mt-6">
+            <DevnetFundCard />
+          </div>
+        )}
       </section>
     </main>
   );

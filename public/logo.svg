@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 200" width="560" height="200" role="img" aria-label="SOL'D">
+  <title>SOL'D</title>
+
+  <defs>
+    <style>
+      .word {
+        font-family: Unbounded, 'IBM Plex Sans', system-ui, sans-serif;
+        font-weight: 800;
+        font-size: 156px;
+        letter-spacing: -4px;
+      }
+      .mono {
+        font-family: 'Space Mono', monospace;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.18em;
+      }
+    </style>
+  </defs>
+
+  <!-- transparent background; brand uses #fbfaf5 cream wherever placed -->
+
+  <!-- SOL'D wordmark -->
+  <text x="32" y="148" class="word" fill="#0b0b0b">SOL<tspan fill="#0f6e56" dx="-10">'</tspan>D</text>
+
+  <!-- terminal accent square (the "period" cue used throughout the UI) -->
+  <rect x="500" y="128" width="22" height="22" fill="#0f6e56"/>
+
+  <!-- mono tag-line (matches glyph-badge style across the site) -->
+  <text x="34" y="184" class="mono" fill="#0b0b0b" text-transform="uppercase">DECENTRALIZED · SALES · GUILD</text>
+</svg>

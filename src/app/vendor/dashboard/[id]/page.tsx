@@ -2,8 +2,10 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useState } from 'react';
 import Nav from '@/components/Nav';
 import {
+  addEscrow,
   pauseBounty,
   reviewSale,
   useBounty,
@@ -11,7 +13,15 @@ import {
   useBountySales,
   useScoutLeaderboardForBounty,
 } from '@/lib/store';
+import Modal from '@/components/Modal';
+import AgentSuggestion from '@/components/AgentSuggestion';
+import EscrowAdvisor from '@/components/EscrowAdvisor';
+import FunnelPanel from '@/components/FunnelPanel';
+import { useVerifierSuggestions } from '@/lib/hooks/useVerifierSuggestions';
+import { adviseEscrow } from '@/lib/agents/escrowAdvisor';
 import { useToast } from '@/lib/toast';
+import { useWallet } from '@/lib/wallet';
+import { isEscrowDeployed, useSigner } from '@/lib/solana';
 
 export default function VendorBountyDetail() {
   const params = useParams<{ id: string }>();
@@ -20,6 +30,14 @@ export default function VendorBountyDetail() {
   const sales = useBountySales(params.id);
   const board = useScoutLeaderboardForBounty(params.id);
   const { toast } = useToast();
+  const { wallet } = useWallet();
+  const sign = useSigner(wallet?.provider);
+  const onChain = isEscrowDeployed();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState(0);
+  const pendingSaleIds = sales.filter((s) => s.status === 'pending').map((s) => s.id);
+  const suggestions = useVerifierSuggestions(pendingSaleIds);
 
   if (!bounty) {
     return (
@@ -36,6 +54,13 @@ export default function VendorBountyDetail() {
   }
 
   const verified = sales.filter((s) => s.status === 'verified').length;
+  const pendingCount = sales.filter((s) => s.status === 'pending').length;
+  const advice = adviseEscrow({
+    rewardPerSale: bounty.rewardAmount,
+    targetSales: bounty.targetSales,
+    escrowDeposited: bounty.escrowDeposited,
+    pendingSalesCount: pendingCount,
+  });
 
   return (
     <main className="relative min-h-screen overflow-hidden text-earn-gray-900">
@@ -51,15 +76,63 @@ export default function VendorBountyDetail() {
             <h1 className="font-eldritch text-2xl sm:text-3xl md:text-4xl font-bold break-words">{bounty.title}</h1>
             <p className="mt-2 max-w-2xl text-earn-gray-700 text-sm sm:text-base">{bounty.description}</p>
           </div>
-          <button
-            className="btn-secondary text-xs"
-            onClick={() => {
-              pauseBounty(bounty.id);
-              toast(`Bounty ${bounty.status === 'active' ? 'paused' : 'resumed'}`, 'info');
-            }}
-          >
-            {bounty.status === 'active' ? 'Pause' : 'Resume'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn-secondary text-xs"
+              onClick={() => {
+                pauseBounty(bounty.id);
+                toast(`Bounty ${bounty.status === 'active' ? 'paused' : 'resumed'}`, 'info');
+              }}
+            >
+              {bounty.status === 'active' ? 'Pause' : 'Resume'}
+            </button>
+            <button
+              className="btn-accent text-xs"
+              onClick={() => {
+                setTopUpAmount(bounty.rewardAmount * 10);
+                setTopUpOpen(true);
+              }}
+            >
+              Top up
+            </button>
+            {bounty.escrowDeposited > 0 && (
+              <button
+                className="btn-danger text-xs"
+                disabled={pendingId === 'close'}
+                onClick={async () => {
+                  if (!wallet || wallet.address !== bounty.vendorAddress) {
+                    toast('Connect the vendor wallet to close this bounty', 'error');
+                    return;
+                  }
+                  if (onChain && !sign) {
+                    toast('Vendor wallet cannot sign. Use Phantom, Solflare, or Embedded.', 'error');
+                    return;
+                  }
+                  setPendingId('close');
+                  try {
+                    const { closeBountyEscrow } = await import('@/lib/escrow');
+                    const r = await closeBountyEscrow(
+                      { vendorAddress: wallet.address, bountyId: bounty.id },
+                      sign ? { signTransaction: sign } : undefined,
+                    );
+                    pauseBounty(bounty.id);
+                    toast(
+                      onChain
+                        ? `Escrow refunded · ${r.txHash.slice(0, 8)}…`
+                        : 'Escrow refunded (mock)',
+                      'success',
+                    );
+                  } catch (e) {
+                    toast(e instanceof Error ? e.message : 'Refund failed', 'error');
+                  } finally {
+                    setPendingId(null);
+                  }
+                }}
+              >
+                {pendingId === 'close' ? 'Closing…' : 'Close & refund'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 grid-cols-2 md:grid-cols-4 my-8">
@@ -69,7 +142,16 @@ export default function VendorBountyDetail() {
           <Stat label="Escrow" value={`$${bounty.escrowDeposited.toLocaleString()}`} />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <EscrowAdvisor
+          advice={advice}
+          token={bounty.rewardToken}
+          onTopUp={(amount) => {
+            setTopUpAmount(amount);
+            setTopUpOpen(true);
+          }}
+        />
+
+        <div className="grid gap-6 md:grid-cols-2 mt-6">
           <div className="ink-panel p-6">
             <h2 className="font-eldritch text-xl font-bold">Scout Leaderboard</h2>
             <p className="font-mono text-[10px] uppercase text-earn-gray-600">Ranked by verified sales</p>
@@ -111,16 +193,55 @@ export default function VendorBountyDetail() {
                           <p className="font-mono text-xs font-bold break-all">{s.salesId}</p>
                           <p className="text-xs mt-1 break-words">{s.buyerNote}</p>
                           <p className="font-mono text-[10px] uppercase text-earn-gray-500 mt-1 break-all">tx: {s.txHash}</p>
+                          {suggestions[s.id] && (
+                            <AgentSuggestion
+                              decision={suggestions[s.id].decision}
+                              confidence={suggestions[s.id].confidence}
+                              signals={suggestions[s.id].signals}
+                              reasoning={suggestions[s.id].reasoning}
+                            />
+                          )}
                         </div>
                         <div className="flex sm:flex-col gap-1 shrink-0">
                           <button
                             className="btn-accent text-[10px] px-3 py-1"
-                            onClick={() => {
-                              reviewSale(s.id, 'verified');
-                              toast(`Released ${s.payoutAmount} ${bounty.rewardToken} to ${s.scoutAddress.slice(0, 6)}…`, 'success');
+                            disabled={pendingId === s.id}
+                            onClick={async () => {
+                              if (!wallet || wallet.address !== bounty.vendorAddress) {
+                                toast('Connect the vendor wallet to verify', 'error');
+                                return;
+                              }
+                              if (onChain && !sign) {
+                                toast('Vendor wallet cannot sign. Use Phantom, Solflare, or Embedded.', 'error');
+                                return;
+                              }
+                              setPendingId(s.id);
+                              try {
+                                const { releaseFromEscrow } = await import('@/lib/escrow');
+                                const r = await releaseFromEscrow(
+                                  {
+                                    vendorAddress: wallet.address,
+                                    bountyId: bounty.id,
+                                    scoutAddress: s.scoutAddress,
+                                    amount: s.payoutAmount,
+                                  },
+                                  sign ? { signTransaction: sign } : undefined,
+                                );
+                                reviewSale(s.id, 'verified');
+                                toast(
+                                  onChain
+                                    ? `Released ${s.payoutAmount} ${bounty.rewardToken} · ${r.txHash.slice(0, 8)}…`
+                                    : `Released ${s.payoutAmount} ${bounty.rewardToken} (mock)`,
+                                  'success',
+                                );
+                              } catch (e) {
+                                toast(e instanceof Error ? e.message : 'Release failed', 'error');
+                              } finally {
+                                setPendingId(null);
+                              }
                             }}
                           >
-                            Verify
+                            {pendingId === s.id ? 'Releasing…' : 'Verify'}
                           </button>
                           <button
                             className="btn-secondary text-[10px] px-3 py-1"
@@ -156,7 +277,90 @@ export default function VendorBountyDetail() {
             </ul>
           )}
         </div>
+
+        <div className="mt-6">
+          <FunnelPanel
+            bountyId={bounty.id}
+            mode="vendor"
+            onError={(m) => toast(m, 'error')}
+          />
+        </div>
       </section>
+
+      <Modal open={topUpOpen} onClose={() => setTopUpOpen(false)} title="Top up escrow">
+        <div className="space-y-4">
+          <p className="text-sm text-earn-gray-700">
+            Add more {bounty.rewardToken} to{' '}
+            <span className="font-mono break-words">{bounty.title}</span>. Each {bounty.rewardAmount}{' '}
+            {bounty.rewardToken} buys one more verified-sale payout.
+          </p>
+          <div>
+            <label className="field-label">Amount ({bounty.rewardToken})</label>
+            <input
+              type="number"
+              min={bounty.rewardAmount}
+              step={bounty.rewardAmount}
+              value={topUpAmount}
+              onChange={(e) => setTopUpAmount(Number(e.target.value))}
+              className="field-input"
+            />
+            <p className="font-mono text-[10px] uppercase text-earn-gray-600 mt-1">
+              Funds {Math.max(0, Math.floor(topUpAmount / Math.max(1, bounty.rewardAmount)))} more sale
+              {topUpAmount / Math.max(1, bounty.rewardAmount) === 1 ? '' : 's'}.
+            </p>
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+            <button
+              className="btn-secondary text-xs"
+              onClick={() => setTopUpOpen(false)}
+              disabled={pendingId === 'topup'}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn-accent text-xs"
+              disabled={pendingId === 'topup' || topUpAmount <= 0}
+              onClick={async () => {
+                if (!wallet || wallet.address !== bounty.vendorAddress) {
+                  toast('Connect the vendor wallet to top up', 'error');
+                  return;
+                }
+                if (onChain && bounty.rewardToken === 'USDC' && !sign) {
+                  toast('Vendor wallet cannot sign. Use Phantom, Solflare, or Embedded.', 'error');
+                  return;
+                }
+                setPendingId('topup');
+                try {
+                  const { depositToEscrow } = await import('@/lib/escrow');
+                  const r = await depositToEscrow(
+                    {
+                      vendorAddress: wallet.address,
+                      bountyId: bounty.id,
+                      amount: topUpAmount,
+                      token: bounty.rewardToken,
+                    },
+                    sign ? { signTransaction: sign } : undefined,
+                  );
+                  addEscrow(bounty.id, r.deposited);
+                  toast(
+                    onChain && bounty.rewardToken === 'USDC'
+                      ? `Topped up ${r.deposited.toLocaleString()} ${bounty.rewardToken} · ${r.txHash.slice(0, 8)}…`
+                      : `Topped up ${r.deposited.toLocaleString()} ${bounty.rewardToken}`,
+                    'success',
+                  );
+                  setTopUpOpen(false);
+                } catch (e) {
+                  toast(e instanceof Error ? e.message : 'Top-up failed', 'error');
+                } finally {
+                  setPendingId(null);
+                }
+              }}
+            >
+              {pendingId === 'topup' ? 'Depositing…' : `Deposit ${topUpAmount.toLocaleString()} ${bounty.rewardToken}`}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </main>
   );
 }

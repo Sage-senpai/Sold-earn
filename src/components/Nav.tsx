@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useWallet } from '@/lib/wallet';
+import { useVendorPendingCount } from '@/lib/store';
+import { chainLabel } from '@/lib/chain-config';
 import WalletButton from './WalletButton';
 
 export default function Nav() {
-  const { role } = useWallet();
+  const { role, wallet } = useWallet();
   const [open, setOpen] = useState(false);
+  const pendingCount = useVendorPendingCount(role === 'vendor' ? wallet?.address : undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -21,18 +24,41 @@ export default function Nav() {
   return (
     <nav className="section-shell sticky top-3 sm:top-4 z-[60] pt-3 sm:pt-4">
       <div className="ink-panel flex items-center justify-between gap-2 px-3 py-2.5 sm:px-5 sm:py-3 md:px-6">
-        <Link href="/" className="font-eldritch text-base sm:text-lg md:text-xl font-bold whitespace-nowrap">
-          SOLd · <span className="text-earn-accent">Earn</span>
+        <Link href="/" aria-label="SOL'D — home" className="flex items-center whitespace-nowrap">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/wordmark.svg"
+            alt="SOL'D"
+            width={144}
+            height={44}
+            className="h-7 sm:h-8 md:h-9 w-auto"
+          />
         </Link>
 
         <div className="hidden lg:flex items-center gap-5">
           <NavLink href="/scout/bounties">Bounties</NavLink>
-          {role === 'vendor' && <NavLink href="/vendor/dashboard">Vendor</NavLink>}
+          {role === 'vendor' && (
+            <>
+              <NavLink href="/vendor/dashboard">Vendor</NavLink>
+              <NavLink href="/vendor/inbox">
+                Inbox
+                {pendingCount > 0 && (
+                  <span
+                    className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-earn-accent text-white text-[10px] font-bold rounded-full"
+                    aria-label={`${pendingCount} pending sales to verify`}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </NavLink>
+            </>
+          )}
           {role === 'scout' && <NavLink href="/scout/dashboard">Scout</NavLink>}
           <NavLink href="/scout/leaderboard">Leaderboard</NavLink>
         </div>
 
         <div className="flex items-center gap-2">
+          <ChainStatusPill />
           <div className="hidden sm:block">
             <WalletButton size="sm" />
           </div>
@@ -59,7 +85,12 @@ export default function Nav() {
         <div className="lg:hidden mt-2 ink-panel p-4 flex flex-col gap-2 fade-in">
           <MobileLink href="/scout/bounties" onClick={() => setOpen(false)}>Bounties</MobileLink>
           {role === 'vendor' && (
-            <MobileLink href="/vendor/dashboard" onClick={() => setOpen(false)}>Vendor Dashboard</MobileLink>
+            <>
+              <MobileLink href="/vendor/dashboard" onClick={() => setOpen(false)}>Vendor Dashboard</MobileLink>
+              <MobileLink href="/vendor/inbox" onClick={() => setOpen(false)}>
+                Inbox{pendingCount > 0 ? ` (${pendingCount})` : ''}
+              </MobileLink>
+            </>
           )}
           {role === 'scout' && (
             <MobileLink href="/scout/dashboard" onClick={() => setOpen(false)}>Scout Dashboard</MobileLink>
@@ -73,6 +104,29 @@ export default function Nav() {
         </div>
       )}
     </nav>
+  );
+}
+
+function ChainStatusPill() {
+  const label = chainLabel();
+  const isMock = label === 'Mock';
+  return (
+    <span
+      title={
+        isMock
+          ? 'On-chain escrow not yet deployed. Vendor flows run in mock mode. Set NEXT_PUBLIC_ESCROW_PROGRAM_ID to enable.'
+          : 'Escrow program is live on-chain.'
+      }
+      className={`hidden md:inline-flex items-center gap-1 border border-earn-gray-900 px-2 py-1 font-mono text-[9px] uppercase tracking-wider ${
+        isMock ? 'bg-earn-amber/30' : 'bg-earn-accent-soft/40'
+      }`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${isMock ? 'bg-earn-amber' : 'bg-earn-accent'}`}
+        aria-hidden="true"
+      />
+      {isMock ? 'Mock mode' : `${label} · live`}
+    </span>
   );
 }
 

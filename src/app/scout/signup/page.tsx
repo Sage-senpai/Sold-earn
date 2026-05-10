@@ -8,6 +8,7 @@ import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/lib/toast';
 import { upsertScout, useScout } from '@/lib/store';
 import { mockSbtMintAddress } from '@/lib/sbt';
+import { useSigner } from '@/lib/solana';
 
 export default function ScoutSignup() {
   const router = useRouter();
@@ -20,25 +21,60 @@ export default function ScoutSignup() {
   const [socialX, setSocialX] = useState(existing?.socialX ?? '');
   const [socialTelegram, setSocialTelegram] = useState(existing?.socialTelegram ?? '');
   const [region, setRegion] = useState(existing?.region ?? 'Global');
+  const [busy, setBusy] = useState(false);
 
+  const sign = useSigner(wallet?.provider);
   const previewSbt = wallet ? mockSbtMintAddress(wallet.address) : '—';
   const isEmbedded = wallet?.provider === 'embedded';
+  const canMintOnChain = !!sign;
 
-  const submit = () => {
+  const submit = async () => {
     if (!wallet) return toast('Connect a wallet first', 'error');
     if (!displayName) return toast('Display name is required', 'error');
-    upsertScout({
-      address: wallet.address,
-      displayName,
-      bio,
-      socialX,
-      socialTelegram,
-      region,
-      walletProvider: wallet.provider,
-    });
-    setRole('scout');
-    toast(`SBT minted: ${previewSbt}`, 'success');
-    router.push('/scout/dashboard');
+
+    setBusy(true);
+    try {
+      let sbtMint = existing?.sbtMint;
+      if (!sbtMint && canMintOnChain) {
+        try {
+          const { mintSbt } = await import('@/lib/sbt');
+          const { PublicKey } = await import('@solana/web3.js');
+          const r = await mintSbt({
+            walletPublicKey: new PublicKey(wallet.address),
+            signTransaction: sign!,
+            displayName,
+            region,
+            bio,
+          });
+          sbtMint = r.assetAddress;
+          toast(`SBT minted on-chain · ${r.signature.slice(0, 8)}…`, 'success');
+        } catch (e) {
+          // Fall back to deterministic mock so the rest of the flow keeps moving.
+          // eslint-disable-next-line no-console
+          console.warn('[scout-signup] on-chain mint failed; falling back to mock', e);
+          sbtMint = mockSbtMintAddress(wallet.address);
+          toast(
+            e instanceof Error ? `On-chain mint failed: ${e.message} — using local SBT.` : 'On-chain mint failed.',
+            'error',
+          );
+        }
+      }
+      if (!sbtMint) sbtMint = mockSbtMintAddress(wallet.address);
+      upsertScout({
+        address: wallet.address,
+        displayName,
+        bio,
+        socialX,
+        socialTelegram,
+        region,
+        walletProvider: wallet.provider,
+        sbtMint,
+      });
+      setRole('scout');
+      router.push('/scout/dashboard');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -87,11 +123,22 @@ export default function ScoutSignup() {
                   <input className="field-input" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="City, Country, or Global" />
                 </div>
 
-                <div className="flex justify-end pt-4">
-                  <button className="btn-accent" onClick={submit}>
-                    Mint SBT & enter dashboard
+                <div className="flex flex-col-reverse sm:flex-row justify-end pt-4 gap-2">
+                  <button className="btn-accent" onClick={submit} disabled={busy}>
+                    {busy
+                      ? 'Minting…'
+                      : canMintOnChain
+                        ? 'Mint SBT on-chain & enter dashboard'
+                        : 'Mint SBT & enter dashboard'}
                   </button>
                 </div>
+                {!canMintOnChain && wallet && (
+                  <p className="font-mono text-[10px] uppercase text-earn-gray-600">
+                    {wallet.provider === 'manual'
+                      ? 'Pasted addresses cannot sign. Connect a real wallet to mint a real SBT.'
+                      : 'Connected wallet cannot sign — using a deterministic local SBT.'}
+                  </p>
+                )}
               </div>
             )}
           </div>

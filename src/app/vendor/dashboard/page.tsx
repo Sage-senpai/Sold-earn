@@ -2,10 +2,13 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Nav from '@/components/Nav';
-import HoldBountyDialog from '@/components/HoldBountyDialog';
 import { useWallet } from '@/lib/wallet';
 import { useVendor, useVendorBounties } from '@/lib/store';
+
+const HoldBountyDialog = dynamic(() => import('@/components/HoldBountyDialog'), { ssr: false });
+const DevnetFundCard = dynamic(() => import('@/components/DevnetFundCard'), { ssr: false });
 
 export default function VendorDashboard() {
   const { wallet } = useWallet();
@@ -40,6 +43,12 @@ export default function VendorDashboard() {
           <Stat label="Total Escrow" value={`$${bounties.reduce((a, b) => a + b.escrowDeposited, 0).toLocaleString()}`} />
           <Stat label="Bounties Held" value={bounties.length.toString()} />
         </div>
+
+        {bounties.reduce((a, b) => a + b.escrowDeposited, 0) === 0 && (
+          <div className="mb-8">
+            <DevnetFundCard />
+          </div>
+        )}
 
         <h2 className="font-eldritch text-xl font-bold mb-3">All Bounties</h2>
         {bounties.length === 0 ? (

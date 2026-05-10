@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/lib/toast';
-import { createBounty } from '@/lib/store';
-import { depositToEscrow } from '@/lib/escrow';
+import { createBounty, removeBounty } from '@/lib/store';
+import { isEscrowDeployed, useSigner } from '@/lib/solana';
 import type { Bounty } from '@/lib/types';
+import type { DraftedBounty } from '@/lib/agents/drafter';
 
 export default function HoldBountyDialog({
   open,
@@ -19,6 +20,8 @@ export default function HoldBountyDialog({
 }) {
   const { wallet } = useWallet();
   const { toast } = useToast();
+  const sign = useSigner(wallet?.provider);
+  const onChain = isEscrowDeployed();
 
   const [title, setTitle] = useState('');
   const [bio, setBio] = useState('');
@@ -29,8 +32,51 @@ export default function HoldBountyDialog({
   const [target, setTarget] = useState(50);
   const [region, setRegion] = useState('Global');
   const [busy, setBusy] = useState(false);
+  const [brief, setBrief] = useState('');
+  const [drafting, setDrafting] = useState(false);
+  const [draftReason, setDraftReason] = useState<string | null>(null);
 
   const requiredEscrow = useMemo(() => reward * target, [reward, target]);
+
+  const draftWithAgent = async () => {
+    if (brief.trim().length < 8) {
+      toast('Type a longer brief — at least a sentence', 'error');
+      return;
+    }
+    setDrafting(true);
+    setDraftReason(null);
+    try {
+      const res = await fetch('/api/bounties/draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ brief, vendorAddress: wallet?.address }),
+      });
+      if (res.status === 503) {
+        toast('Drafter offline — set GROQ_API_KEY in .env.local', 'error');
+        return;
+      }
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        toast(j.error ? `Drafter: ${j.error}` : 'Drafter failed', 'error');
+        return;
+      }
+      const { draft } = (await res.json()) as { draft: DraftedBounty };
+      setTitle(draft.title);
+      setBio(draft.description);
+      setProductKind(draft.productKind);
+      setProductName(draft.productName);
+      setReward(draft.rewardAmount);
+      setTarget(draft.targetSales);
+      setRegion(draft.region);
+      setToken('USDC');
+      setDraftReason(draft.reasoning);
+      toast('Draft ready — review and edit before launch', 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Drafter failed', 'error');
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   const reset = () => {
     setTitle('');
@@ -41,6 +87,8 @@ export default function HoldBountyDialog({
     setToken('USDC');
     setTarget(50);
     setRegion('Global');
+    setBrief('');
+    setDraftReason(null);
   };
 
   const submit = async () => {
@@ -52,14 +100,16 @@ export default function HoldBountyDialog({
       toast('Fill in title, product, and a short bio', 'error');
       return;
     }
+    if (onChain && token === 'USDC' && !sign) {
+      toast('Connect Phantom, Solflare, or Embedded to sign the deposit', 'error');
+      return;
+    }
     setBusy(true);
+    let bountyId: string | null = null;
     try {
-      const dep = await depositToEscrow({
-        vendorAddress: wallet.address,
-        bountyId: 'pre',
-        amount: requiredEscrow,
-        token,
-      });
+      // Lazy-load the chain client so the heavy web3.js/spl-token tree only
+      // ships when the user actually opens this modal.
+      const { depositToEscrow } = await import('@/lib/escrow');
       const bounty = createBounty({
         vendorAddress: wallet.address,
         title,
@@ -70,13 +120,30 @@ export default function HoldBountyDialog({
         rewardToken: token,
         targetSales: target,
         region,
-        escrowDeposited: dep.deposited,
+        escrowDeposited: 0,
       });
-      toast(`Bounty live · escrow ${dep.deposited.toLocaleString()} ${token}`, 'success');
+      bountyId = bounty.id;
+      const dep = await depositToEscrow(
+        {
+          vendorAddress: wallet.address,
+          bountyId: bounty.id,
+          amount: requiredEscrow,
+          token,
+        },
+        sign ? { signTransaction: sign } : undefined,
+      );
+      bounty.escrowDeposited = dep.deposited;
+      toast(
+        onChain && token === 'USDC'
+          ? `Escrow on-chain · ${dep.deposited.toLocaleString()} ${token} · ${dep.txHash.slice(0, 8)}…`
+          : `Bounty live · escrow ${dep.deposited.toLocaleString()} ${token}`,
+        'success',
+      );
       onCreated?.(bounty);
       reset();
       onClose();
     } catch (e) {
+      if (bountyId) removeBounty(bountyId);
       toast(e instanceof Error ? e.message : 'Could not create bounty', 'error');
     } finally {
       setBusy(false);
@@ -86,6 +153,36 @@ export default function HoldBountyDialog({
   return (
     <Modal open={open} onClose={onClose} title="Hold a Bounty">
       <div className="space-y-4">
+        <details className="border border-earn-gray-200 bg-earn-gray-50/50 p-3">
+          <summary className="cursor-pointer select-none flex items-center justify-between gap-2">
+            <span className="font-mono text-[10px] uppercase">Draft with agent</span>
+            <span className="font-mono text-[9px] uppercase text-earn-gray-600">Groq · llama-3.3</span>
+          </summary>
+          <div className="mt-3 space-y-2">
+            <textarea
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              className="field-input min-h-[72px]"
+              placeholder="One or two lines: what you sell, who buys it, how a sale gets verified."
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={draftWithAgent}
+                disabled={drafting || brief.trim().length < 8}
+              >
+                {drafting ? 'Drafting…' : 'Generate draft'}
+              </button>
+            </div>
+            {draftReason && (
+              <p className="font-mono text-[10px] text-earn-gray-600 break-words">
+                agent: {draftReason}
+              </p>
+            )}
+          </div>
+        </details>
+
         <div>
           <label className="field-label">Bounty title</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} className="field-input" placeholder="Solana Pay onboarding — Lagos" />

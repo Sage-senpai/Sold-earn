@@ -2,18 +2,22 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Nav from '@/components/Nav';
 import BarChart from '@/components/charts/BarChart';
+import FunnelPanel from '@/components/FunnelPanel';
+import OutreachComposer from '@/components/OutreachComposer';
 import { useWallet } from '@/lib/wallet';
 import {
   APPLICATION_CAP_VALUE,
-  recordSale,
   useBounty,
   useScout,
   useScoutApplications,
   useScoutSales,
 } from '@/lib/store';
 import { useToast } from '@/lib/toast';
+
+const LogSaleDialog = dynamic(() => import('@/components/LogSaleDialog'), { ssr: false });
 
 export default function ScoutDashboard() {
   const { wallet } = useWallet();
@@ -25,6 +29,7 @@ export default function ScoutDashboard() {
   const [activeAppId, setActiveAppId] = useState<string | null>(apps[0]?.id ?? null);
   const activeApp = useMemo(() => apps.find((a) => a.id === activeAppId) ?? apps[0], [apps, activeAppId]);
   const activeBounty = useBounty(activeApp?.bountyId);
+  const [logOpen, setLogOpen] = useState(false);
 
   const verifiedSet = new Set(sales.filter((s) => s.status === 'verified').map((s) => s.bountyId));
   const openCount = apps.filter((a) => a.status !== 'rejected' && !verifiedSet.has(a.bountyId)).length;
@@ -35,17 +40,11 @@ export default function ScoutDashboard() {
   }));
 
   const onLogSale = () => {
-    if (!activeApp) return;
-    const note = window.prompt('Buyer / merchant note (e.g. "Alpha Books, Lagos")');
-    if (!note) return;
-    const tx = `mock_sale_${Math.random().toString(36).slice(2, 8)}`;
-    recordSale({
-      application: activeApp,
-      buyerNote: note,
-      txHash: tx,
-      payoutAmount: activeBounty?.rewardAmount ?? 0,
-    });
-    toast('Sale submitted — awaiting vendor verify', 'success');
+    if (!activeApp) {
+      toast('Apply to a bounty first', 'error');
+      return;
+    }
+    setLogOpen(true);
   };
 
   if (!scout) {
@@ -171,6 +170,36 @@ export default function ScoutDashboard() {
           </div>
         </div>
       </section>
+
+      {activeApp && activeBounty && (
+        <section className="section-shell relative z-10 pb-10 appear">
+          <h2 className="font-eldritch text-xl sm:text-2xl font-bold mb-2 break-words">
+            Sales kit · {activeBounty.title}
+          </h2>
+          <p className="font-mono text-[10px] uppercase text-earn-gray-600 mb-4">
+            agent-generated. read the funnel, then draft outreach for one lead.
+          </p>
+          <div className="grid gap-6 md:grid-cols-[1.1fr,0.9fr]">
+            <FunnelPanel
+              bountyId={activeBounty.id}
+              mode="scout"
+              onError={(m) => toast(m, 'error')}
+            />
+            <OutreachComposer
+              bountyId={activeBounty.id}
+              scoutAddress={wallet?.address}
+              onError={(m) => toast(m, 'error')}
+            />
+          </div>
+        </section>
+      )}
+
+      <LogSaleDialog
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        application={activeApp}
+        bounty={activeBounty}
+      />
     </main>
   );
 }

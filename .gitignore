@@ -8,3 +8,8 @@ out
 next-env.d.ts
 .DS_Store
 *.log
+
+# Anchor / Cargo build output
+target/
+**/target/
+.anchor/

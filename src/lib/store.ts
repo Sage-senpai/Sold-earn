@@ -194,6 +194,31 @@ export function useVendorBounties(vendorAddress?: string) {
   return useBounties({ vendorAddress });
 }
 
+export function useVendorPendingCount(vendorAddress?: string) {
+  const bounties = useStore((s) => s.bounties);
+  const sales = useStore((s) => s.sales);
+  if (!vendorAddress) return 0;
+  const owned = new Set(
+    bounties.filter((b) => b.vendorAddress === vendorAddress).map((b) => b.id),
+  );
+  return sales.filter((s) => owned.has(s.bountyId) && s.status === 'pending').length;
+}
+
+export function useVendorInbox(vendorAddress?: string) {
+  const bounties = useStore((s) => s.bounties);
+  const sales = useStore((s) => s.sales);
+  const empty = { pending: [] as Sale[], history: [] as Sale[] };
+  if (!vendorAddress) return empty;
+  const owned = new Set(
+    bounties.filter((b) => b.vendorAddress === vendorAddress).map((b) => b.id),
+  );
+  const mine = sales.filter((s) => owned.has(s.bountyId));
+  return {
+    pending: mine.filter((s) => s.status === 'pending').sort((a, b) => b.createdAt - a.createdAt),
+    history: mine.filter((s) => s.status !== 'pending').sort((a, b) => b.createdAt - a.createdAt),
+  };
+}
+
 export function useScoutLeaderboardForBounty(bountyId?: string) {
   const sales = useBountySales(bountyId);
   const apps = useBountyApplications(bountyId);
@@ -249,9 +274,10 @@ export function upsertScout(input: {
   socialTelegram?: string;
   region: string;
   walletProvider: WalletProvider;
+  sbtMint?: string;
 }): ScoutProfile {
   const existing = state.scouts[input.address];
-  const sbtMint = existing?.sbtMint ?? mockSbtMintAddress(input.address);
+  const sbtMint = input.sbtMint ?? existing?.sbtMint ?? mockSbtMintAddress(input.address);
   // If the SBT was minted with an embedded wallet, payout is locked to that wallet.
   const payoutLocked = existing?.payoutLocked ?? input.walletProvider === 'embedded';
   const profile: ScoutProfile = {
@@ -389,6 +415,24 @@ export function pauseBounty(id: string) {
     bounties: s.bounties.map((b) =>
       b.id === id ? { ...b, status: b.status === 'active' ? 'paused' : 'active' } : b,
     ),
+  }));
+}
+
+export function addEscrow(id: string, delta: number) {
+  set((s) => ({
+    ...s,
+    bounties: s.bounties.map((b) =>
+      b.id === id ? { ...b, escrowDeposited: b.escrowDeposited + delta } : b,
+    ),
+  }));
+}
+
+export function removeBounty(id: string) {
+  set((s) => ({
+    ...s,
+    bounties: s.bounties.filter((b) => b.id !== id),
+    applications: s.applications.filter((a) => a.bountyId !== id),
+    sales: s.sales.filter((sale) => sale.bountyId !== id),
   }));
 }
 

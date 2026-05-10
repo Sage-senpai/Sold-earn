@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import Nav from '@/components/Nav';
 import { useStore } from '@/lib/store';
 
@@ -59,7 +60,14 @@ export default function LeaderboardPage() {
                 {rows.map((r, i) => (
                   <tr key={r.address} className="border-t border-earn-gray-200">
                     <Td>{i + 1}</Td>
-                    <Td bold>{r.displayName}</Td>
+                    <Td bold>
+                      <Link
+                        href={`/scout/${encodeURIComponent(r.address)}`}
+                        className="hover:text-earn-accent underline-offset-2 hover:underline"
+                      >
+                        {r.displayName}
+                      </Link>
+                    </Td>
                     <Td>{r.region}</Td>
                     <Td mono>{r.sbt}</Td>
                     <Td mono>{r.count}</Td>

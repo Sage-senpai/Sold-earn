@@ -2,7 +2,34 @@
   "permissions": {
     "allow": [
       "Bash(echo \"EXIT=$?\")",
-      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit)"
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit)",
+      "Bash(mkdir -p c:/Users/USER/sold-earn/public)",
+      "Bash(where magick *)",
+      "Bash(where convert *)",
+      "Bash(where inkscape *)",
+      "Bash(where rsvg-convert *)",
+      "Bash(where npx *)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/logo.svg public/logo.png --width 1120)",
+      "Bash(npx --yes @resvg/resvg-js-cli --help)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/logo.svg public/logo.png --fit-zoom 2 --font-default-family \"Arial\")",
+      "Bash(npx --yes @resvg/resvg-js-cli public/logo.svg public/logo@4x.png --fit-zoom 4 --font-default-family \"Arial\")",
+      "Bash(npx --yes @resvg/resvg-js-cli public/icon.svg public/icon-256.png --fit-zoom 1)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/icon.svg public/icon-512.png --fit-zoom 2)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/icon.svg public/icon-1024.png --fit-zoom 4)",
+      "Bash(rm -f public/logo.png public/logo@4x.png public/icon-256.png public/icon-512.png public/icon-1024.png)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/logo.svg public/logo.png --fit-zoom 2 --font-file c:/tmp/fonts/Unbounded-ExtraBold.ttf)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/logo.svg public/logo@4x.png --fit-zoom 4 --font-file c:/tmp/fonts/Unbounded-ExtraBold.ttf)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/icon.svg public/icon-256.png --fit-zoom 0.5 --font-file c:/tmp/fonts/Unbounded-ExtraBold.ttf)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/icon.svg public/icon-512.png --fit-zoom 1 --font-file c:/tmp/fonts/Unbounded-ExtraBold.ttf)",
+      "Bash(npx --yes @resvg/resvg-js-cli public/icon.svg public/icon-1024.png --fit-zoom 2 --font-file c:/tmp/fonts/Unbounded-ExtraBold.ttf)",
+      "Bash(wait %1)",
+      "Bash(awk '$1==0')",
+      "Bash(mkdir -p \"c:/Users/USER/sold-earn/src/app/scout/[address]\" 2>&1 && ls -la \"c:/Users/USER/sold-earn/src/app/scout/\" 2>&1)",
+      "Bash(npx --yes tsc --noEmit -p tsconfig.json)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\USER\\sold-earn\\public",
+      "c:\\Users\\USER\\sold-earn\\src\\app\\scout"
     ]
   }
 }
