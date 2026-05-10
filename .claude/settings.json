@@ -25,7 +25,12 @@
       "Bash(wait %1)",
       "Bash(awk '$1==0')",
       "Bash(mkdir -p \"c:/Users/USER/sold-earn/src/app/scout/[address]\" 2>&1 && ls -la \"c:/Users/USER/sold-earn/src/app/scout/\" 2>&1)",
-      "Bash(npx --yes tsc --noEmit -p tsconfig.json)"
+      "Bash(npx --yes tsc --noEmit -p tsconfig.json)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\USER\\\\sold-earn\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\USER\\\\sold-earn\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)"
     ],
     "additionalDirectories": [
       "c:\\Users\\USER\\sold-earn\\public",

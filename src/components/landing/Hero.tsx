@@ -1,5 +1,39 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
+// easeOutCubic — fast at the start, settling into the target. Cheap and
+// reads as "snappy" without overshoot.
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+function useCountUp(target: number, durationMs = 1500): number {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      setValue(target);
+      return;
+    }
+    let start: number | null = null;
+    const tick = (now: number) => {
+      if (start === null) start = now;
+      const t = Math.min(1, (now - start) / durationMs);
+      setValue(target * easeOutCubic(t));
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, durationMs]);
+
+  return value;
+}
+
 export default function Hero() {
   return (
     <section className="section-shell relative z-10 flex min-h-[calc(100vh-7rem)] items-center pt-8 sm:pt-12 pb-10 sm:pb-12 appear">
@@ -28,12 +62,20 @@ export default function Hero() {
 
         <div className="relative">
           <div className="ink-panel p-5 sm:p-6 md:p-8">
-            <p className="font-mono text-[10px] uppercase text-earn-gray-600">Live Protocol</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-mono text-[10px] uppercase text-earn-gray-600">Snapshot</p>
+              <span
+                className="font-mono text-[9px] uppercase px-1.5 py-0.5 border border-amber-400 bg-amber-50 text-amber-800"
+                title="Sample figures shown for layout — not pulled from the live protocol"
+              >
+                mock · for demo
+              </span>
+            </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <Stat k="Verified Volume" v="$214,830" />
-              <Stat k="Active Bounties" v="42" />
-              <Stat k="Scouts (SBT)" v="1,317" />
-              <Stat k="Avg. Payout" v="$48" />
+              <Stat k="Verified Volume" target={214830} prefix="$" />
+              <Stat k="Active Bounties" target={42} />
+              <Stat k="Scouts (SBT)" target={1317} />
+              <Stat k="Avg. Payout" target={48} prefix="$" />
             </div>
             <div className="rune-rule my-5 sm:my-6" />
             <p className="font-mono text-[10px] uppercase text-earn-gray-600">Latest Sales ID</p>
@@ -49,11 +91,29 @@ export default function Hero() {
   );
 }
 
-function Stat({ k, v }: { k: string; v: string }) {
+function Stat({
+  k,
+  target,
+  prefix = '',
+  suffix = '',
+}: {
+  k: string;
+  target: number;
+  prefix?: string;
+  suffix?: string;
+}) {
+  const v = useCountUp(target);
   return (
     <div>
       <p className="font-mono text-[10px] uppercase text-earn-gray-600">{k}</p>
-      <p className="metric-number mt-1 text-xl sm:text-2xl font-bold">{v}</p>
+      <p
+        className="metric-number mt-1 text-xl sm:text-2xl font-bold tabular-nums"
+        aria-label={`${k}: ${prefix}${target.toLocaleString()}${suffix}`}
+      >
+        {prefix}
+        {Math.round(v).toLocaleString()}
+        {suffix}
+      </p>
     </div>
   );
 }
