@@ -2,6 +2,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
+import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import { WalletProviderRoot } from '@/lib/wallet';
 import { ToastProvider } from '@/lib/toast';
@@ -55,15 +56,20 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   // Build the @solana/kit clients lazily and only once. They aren't safe to
   // construct on the server (they hold sockets), so we keep this inside the
-  // 'use client' component memo.
-  const solanaRpcs = useMemo(() => {
-    if (!env.privy.enabled) return undefined;
+  // 'use client' component memo. Same for the Solana wallet connectors —
+  // these listen for wallet-standard wallet announcements (Phantom, Solflare,
+  // Backpack, etc.) and have to live on the client.
+  const { solanaRpcs, solanaConnectors } = useMemo(() => {
+    if (!env.privy.enabled) return { solanaRpcs: undefined, solanaConnectors: undefined };
     const chain = SOLANA_CHAIN_FOR_NETWORK[env.solana.network] ?? 'solana:devnet';
     return {
-      [chain]: {
-        rpc: createSolanaRpc(env.solana.rpcUrl),
-        rpcSubscriptions: createSolanaRpcSubscriptions(wsUrlFromHttp(env.solana.rpcUrl)),
+      solanaRpcs: {
+        [chain]: {
+          rpc: createSolanaRpc(env.solana.rpcUrl),
+          rpcSubscriptions: createSolanaRpcSubscriptions(wsUrlFromHttp(env.solana.rpcUrl)),
+        },
       },
+      solanaConnectors: toSolanaWalletConnectors({ shouldAutoConnect: false }),
     };
   }, []);
 
@@ -83,6 +89,9 @@ export default function Providers({ children }: { children: ReactNode }) {
         embeddedWallets: {
           solana: { createOnLogin: 'users-without-wallets' },
           ethereum: { createOnLogin: 'off' },
+        },
+        externalWallets: {
+          solana: { connectors: solanaConnectors },
         },
         solana: { rpcs: solanaRpcs },
       }}
