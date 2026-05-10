@@ -25,12 +25,33 @@ export default function WalletButton({ size = 'md' }: { size?: 'sm' | 'md' }) {
     if (!open || !buttonRef.current) return;
     const update = () => {
       const r = buttonRef.current!.getBoundingClientRect();
-      setCoords({ top: r.bottom + 8, left: r.right, width: r.width });
+      const popW = 320;
+      // Measure real popover height when available; estimate for first paint.
+      const popH = popoverRef.current?.offsetHeight ?? 420;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Horizontal: center on the button, clamp inside viewport.
+      let left = r.left + r.width / 2 - popW / 2;
+      left = Math.max(12, Math.min(left, vw - popW - 12));
+
+      // Vertical: prefer below; flip above when there's not enough room.
+      const spaceBelow = vh - r.bottom;
+      const spaceAbove = r.top;
+      const top =
+        spaceBelow >= popH + 16 || spaceBelow >= spaceAbove
+          ? Math.min(r.bottom + 8, vh - popH - 12)
+          : Math.max(12, r.top - popH - 8);
+
+      setCoords({ top, left, width: r.width });
     };
     update();
+    // Re-measure once popover paints so we can swap the height estimate for the real value.
+    const raf = requestAnimationFrame(update);
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
@@ -136,13 +157,13 @@ export default function WalletButton({ size = 'md' }: { size?: 'sm' | 'md' }) {
               </div>
             </div>
 
-            {/* Desktop popover (anchored to button) */}
+            {/* Desktop popover (anchored to button, viewport-clamped, flips above when needed) */}
             <div
               ref={popoverRef}
-              className="hidden sm:block fixed z-[140] w-80 max-w-[calc(100vw-24px)] border border-earn-gray-900 bg-white p-3 shadow-[8px_10px_0_rgba(0,0,0,0.9)]"
+              className="hidden sm:block fixed z-[140] w-80 max-w-[calc(100vw-24px)] max-h-[calc(100vh-24px)] overflow-y-auto border border-earn-gray-900 bg-white p-3 shadow-[8px_10px_0_rgba(0,0,0,0.9)]"
               style={{
                 top: coords.top,
-                left: Math.max(12, coords.left - 320),
+                left: coords.left,
               }}
               role="dialog"
             >
