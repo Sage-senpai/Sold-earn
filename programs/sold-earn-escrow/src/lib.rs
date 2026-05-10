@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("EarnEscRowSo1d11111111111111111111111111111");
+declare_id!("3MRSRqfA7GovGkcLU5GjNrEmn5s8UEUQJW4mMrPL9gjm");
 
 // SOLd · Earn — bounty escrow.
 //
