@@ -83,7 +83,10 @@ export function useSigner(provider: WalletProvider | null | undefined): SignFn |
     }
 
     if (provider === 'embedded') {
-      if (!privySign) throw new Error('Privy is not configured for signing.');
+      // Privy may not have returned a signer yet (still loading, no wallet
+      // attached, or local-mock fallback when env.privy.enabled is false).
+      // Returning null lets the caller fall back to mock flows; throwing
+      // here would crash any page that mounts useSigner during render.
       return privySign;
     }
 
