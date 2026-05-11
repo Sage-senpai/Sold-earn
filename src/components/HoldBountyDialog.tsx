@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/lib/toast';
-import { createBounty, removeBounty } from '@/lib/store';
+import { createBounty } from '@/lib/store';
 import { isEscrowDeployed, useSigner } from '@/lib/solana';
 import type { Bounty } from '@/lib/types';
 import type { DraftedBounty } from '@/lib/agents/drafter';
@@ -105,12 +105,35 @@ export default function HoldBountyDialog({
       return;
     }
     setBusy(true);
-    let bountyId: string | null = null;
     try {
       // Lazy-load the chain client so the heavy web3.js/spl-token tree only
       // ships when the user actually opens this modal.
       const { depositToEscrow } = await import('@/lib/escrow');
+
+      // Pre-compute a stable id so the on-chain PDA seed is deterministic
+      // for this bounty before we commit anything to the local store.
+      const provisionalId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? `bnt_${crypto.randomUUID().slice(0, 12)}`
+          : `bnt_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
+
+      // Submit the on-chain deposit FIRST. If it fails (user rejects, blockhash
+      // expires, insufficient USDC), we never pollute local state with an
+      // orphan "active" bounty that scouts could try to apply to.
+      const dep = await depositToEscrow(
+        {
+          vendorAddress: wallet.address,
+          bountyId: provisionalId,
+          amount: requiredEscrow,
+          token,
+        },
+        sign ? { signTransaction: sign } : undefined,
+      );
+
+      // Only now is the bounty real — persist it locally with the id whose
+      // PDA we just funded on-chain.
       const bounty = createBounty({
+        id: provisionalId,
         vendorAddress: wallet.address,
         title,
         description: bio,
@@ -120,19 +143,8 @@ export default function HoldBountyDialog({
         rewardToken: token,
         targetSales: target,
         region,
-        escrowDeposited: 0,
+        escrowDeposited: dep.deposited,
       });
-      bountyId = bounty.id;
-      const dep = await depositToEscrow(
-        {
-          vendorAddress: wallet.address,
-          bountyId: bounty.id,
-          amount: requiredEscrow,
-          token,
-        },
-        sign ? { signTransaction: sign } : undefined,
-      );
-      bounty.escrowDeposited = dep.deposited;
       toast(
         onChain && token === 'USDC'
           ? `Escrow on-chain · ${dep.deposited.toLocaleString()} ${token} · ${dep.txHash.slice(0, 8)}…`
@@ -143,7 +155,6 @@ export default function HoldBountyDialog({
       reset();
       onClose();
     } catch (e) {
-      if (bountyId) removeBounty(bountyId);
       toast(e instanceof Error ? e.message : 'Could not create bounty', 'error');
     } finally {
       setBusy(false);

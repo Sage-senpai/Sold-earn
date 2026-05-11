@@ -195,13 +195,25 @@ export async function closeBountyEscrow(
 
   const ixs: TransactionInstruction[] = [
     ComputeBudgetProgram.setComputeUnitLimit({ units: 250_000 }),
+  ];
+
+  // The close ix refunds vault → vendor ATA. If the vendor closed their own
+  // USDC ATA between deposit and close, the refund transfer would fail with
+  // "AccountNotInitialized". Re-create it if needed so close() is always safe
+  // to call.
+  const vendorAtaInfo = await conn.getAccountInfo(vendorAta);
+  if (!vendorAtaInfo) {
+    ixs.push(createAssociatedTokenAccountInstruction(vendor, vendorAta, vendor, USDC_MINT!));
+  }
+
+  ixs.push(
     buildCloseBountyIx({
       vendor,
       bounty: bountyPda,
       vault: vaultPda,
       vendorTokenAccount: vendorAta,
     }),
-  ];
+  );
 
   const tx = await sendIxs(conn, vendor, ixs, chain.signTransaction);
   return { txHash: tx };
@@ -296,21 +308,83 @@ function vaultPdaForBounty(bounty: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync([Buffer.from('vault'), bounty.toBuffer()], ESCROW_PROGRAM_ID!);
 }
 
+// Minimum SOL the payer needs in their wallet before we'll let them sign.
+// Covers two rent-exempt account creations (bounty PDA + vault PDA, ~0.005 SOL),
+// one optional ATA (~0.002 SOL), and a few signature fees. 0.01 SOL is plenty.
+const MIN_PAYER_LAMPORTS = 0.01 * 1_000_000_000;
+
 async function sendIxs(
   conn: ReturnType<typeof getConnection>,
   payer: PublicKey,
   ixs: TransactionInstruction[],
   sign: SignFn,
 ): Promise<string> {
+  // Catch the most common cause of cryptic failure before we even ask the
+  // wallet: not enough SOL to cover fees + rent. The chain returns this as
+  // "Attempt to debit an account but found no record of a prior credit" which
+  // is impossible to interpret from a Phantom popup.
+  const balance = await conn.getBalance(payer, 'confirmed');
+  if (balance < MIN_PAYER_LAMPORTS) {
+    throw new Error(
+      `Wallet only has ${(balance / 1e9).toFixed(4)} SOL — need at least ${(MIN_PAYER_LAMPORTS / 1e9).toFixed(2)} for rent + fees. ` +
+        `Use the "Airdrop 1 SOL" button on the vendor dashboard.`,
+    );
+  }
+
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash('confirmed');
   const tx = new Transaction().add(...ixs);
   tx.feePayer = payer;
   tx.recentBlockhash = blockhash;
 
-  const signed = await sign(tx);
-  const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-  await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
-  return sig;
+  let signed: Transaction;
+  try {
+    signed = await sign(tx);
+  } catch (e) {
+    throw mapWalletError(e);
+  }
+
+  try {
+    const sig = await conn.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+    await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
+    return sig;
+  } catch (e) {
+    throw mapChainError(e);
+  }
+}
+
+// Phantom / Solflare / Privy embedded all surface a rejection differently.
+// Map them to a single friendly message so callers don't have to interrogate.
+function mapWalletError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (
+    /user (rejected|denied|cancel)/i.test(msg) ||
+    /reject(ed|ion)/i.test(msg) ||
+    /4001/.test(msg) // EIP-1193-ish code some adapters use
+  ) {
+    return new Error('Transaction cancelled in wallet.');
+  }
+  if (/not (available|connected|installed)/i.test(msg)) {
+    return new Error('Wallet not available. Connect Phantom, Solflare, or the embedded wallet first.');
+  }
+  return new Error(msg || 'Wallet refused to sign.');
+}
+
+// Pull Anchor's `Error Code: <name>. Error Number: <n>. Error Message: <msg>`
+// pattern out of the simulation logs when available — that's a hundred times
+// more useful than the raw RPC error string.
+function mapChainError(e: unknown): Error {
+  const msg = e instanceof Error ? e.message : String(e);
+  const logs = (e as { logs?: string[] })?.logs ?? [];
+  for (const line of logs) {
+    const m = line.match(/Error Message:\s*(.+?)\.?\s*$/);
+    if (m?.[1]) return new Error(`On-chain error: ${m[1]}`);
+  }
+  if (/insufficient funds/i.test(msg)) return new Error('Insufficient SOL or USDC for this transaction.');
+  if (/blockhash not found/i.test(msg))
+    return new Error('Transaction expired before it could land. Try again — usually takes 1–2 retries on devnet.');
+  if (/already (in use|processed)/i.test(msg)) return new Error('This bounty was already initialised on-chain.');
+  if (/0x1\b/.test(msg)) return new Error('SPL token program rejected the transfer — usually means insufficient token balance.');
+  return new Error(msg || 'Transaction failed on-chain.');
 }
 
 // ─────────────────────────────────────────────────────────────────────────

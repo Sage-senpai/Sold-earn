@@ -299,6 +299,7 @@ export function upsertScout(input: {
 }
 
 export function createBounty(input: {
+  id?: string;
   vendorAddress: string;
   title: string;
   description: string;
@@ -311,7 +312,7 @@ export function createBounty(input: {
   escrowDeposited: number;
 }): Bounty {
   const b: Bounty = {
-    id: newId('bnt'),
+    id: input.id ?? newId('bnt'),
     vendorAddress: input.vendorAddress,
     title: input.title,
     description: input.description,
