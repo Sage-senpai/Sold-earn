@@ -71,8 +71,43 @@ export async function depositToEscrow(
     ComputeBudgetProgram.setComputeUnitLimit({ units: 250_000 }),
   ];
 
+  // Parallelise the three account-existence reads so we don't pay 3× RTT.
+  const [bountyInfo, vendorAtaInfo, vendorAtaBalance] = await Promise.all([
+    conn.getAccountInfo(bountyPda),
+    conn.getAccountInfo(vendorAta),
+    // Balance read only matters when the ATA exists; otherwise treat as 0.
+    conn.getAccountInfo(vendorAta).then((info) =>
+      info ? conn.getTokenAccountBalance(vendorAta).catch(() => null) : null,
+    ),
+  ]);
+
+  // Create the vendor's USDC ATA if they've never held this mint. Without
+  // this the deposit ix fails the Anchor constraint `vendor_token_account.mint
+  // == bounty.mint` because the account doesn't exist at all — and Phantom
+  // surfaces it as a vague "transaction will fail" warning.
+  if (!vendorAtaInfo) {
+    ixs.push(createAssociatedTokenAccountInstruction(vendor, vendorAta, vendor, USDC_MINT!));
+  }
+
+  // Surface a clean client-side error instead of letting the chain throw a
+  // cryptic `0x1` (insufficient funds) deep in the SPL token program.
+  if (vendorAtaInfo && vendorAtaBalance) {
+    const have = BigInt(vendorAtaBalance.value.amount);
+    if (have < lamports) {
+      throw new Error(
+        `Vendor USDC balance is ${vendorAtaBalance.value.uiAmountString ?? '0'} but bounty escrow needs ${input.amount}. ` +
+          `Top up at https://spl-token-faucet.com/?token-name=USDC-Dev or pick a smaller reward × target.`,
+      );
+    }
+  } else if (!vendorAtaInfo) {
+    // Brand new ATA — it'll be created above but has 0 balance, so the
+    // deposit can't fund anything. Bail before we burn a tx fee.
+    throw new Error(
+      `No USDC in this wallet yet. Mint devnet USDC at https://spl-token-faucet.com/?token-name=USDC-Dev (mint: ${USDC_MINT!.toBase58()}), then try again.`,
+    );
+  }
+
   // Initialise the bounty PDA + vault if it doesn't exist yet.
-  const bountyInfo = await conn.getAccountInfo(bountyPda);
   if (!bountyInfo) {
     ixs.push(
       buildInitializeBountyIx({
