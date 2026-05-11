@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useWallet } from '@/lib/wallet';
 import { useVendorPendingCount } from '@/lib/store';
 import { chainLabel } from '@/lib/chain-config';
+import LoginButton from './LoginButton';
 import WalletButton from './WalletButton';
 
 export default function Nav() {
@@ -59,6 +60,7 @@ export default function Nav() {
 
         <div className="flex items-center gap-2">
           <ChainStatusPill />
+          <LoginButton />
           <div className="hidden sm:block">
             <WalletButton size="sm" />
           </div>
@@ -83,6 +85,11 @@ export default function Nav() {
 
       {open && (
         <div className="lg:hidden mt-2 ink-panel p-4 flex flex-col gap-2 fade-in">
+          {!wallet && (
+            <div className="pb-2 mb-2 border-b border-earn-gray-300">
+              <LoginButton variant="inline" />
+            </div>
+          )}
           <MobileLink href="/scout/bounties" onClick={() => setOpen(false)}>Bounties</MobileLink>
           {role === 'vendor' && (
             <>
