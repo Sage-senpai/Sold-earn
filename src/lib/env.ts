@@ -26,6 +26,9 @@ export const env = {
   },
   treasury: {
     address: process.env.NEXT_PUBLIC_TREASURY_ADDRESS ?? '',
-    feeBps: Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS ?? '0'),
+    // 15% platform premium added on top of every bounty escrow.
+    // Vendors deposit base × target × (1 + feeBps/10_000) into the vault.
+    // Override per-deployment via NEXT_PUBLIC_PLATFORM_FEE_BPS.
+    feeBps: Number(process.env.NEXT_PUBLIC_PLATFORM_FEE_BPS ?? '1500'),
   },
 } as const;

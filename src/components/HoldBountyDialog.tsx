@@ -6,6 +6,7 @@ import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/lib/toast';
 import { createBounty } from '@/lib/store';
 import { isEscrowDeployed, useSigner } from '@/lib/solana';
+import { env } from '@/lib/env';
 import type { Bounty } from '@/lib/types';
 import type { DraftedBounty } from '@/lib/agents/drafter';
 
@@ -36,7 +37,18 @@ export default function HoldBountyDialog({
   const [drafting, setDrafting] = useState(false);
   const [draftReason, setDraftReason] = useState<string | null>(null);
 
-  const requiredEscrow = useMemo(() => reward * target, [reward, target]);
+  // Base payout pool (what scouts will earn across all verified sales).
+  const baseEscrow = useMemo(() => reward * target, [reward, target]);
+  // Platform premium added on top — 15% by default, configurable per
+  // deployment via NEXT_PUBLIC_PLATFORM_FEE_BPS. Rounded to whole USDC
+  // so the wallet doesn't render an awkward sub-cent figure.
+  const feeBps = env.treasury.feeBps;
+  const platformFee = useMemo(
+    () => Math.round((baseEscrow * feeBps) / 10_000),
+    [baseEscrow, feeBps],
+  );
+  const requiredEscrow = useMemo(() => baseEscrow + platformFee, [baseEscrow, platformFee]);
+  const feePct = (feeBps / 100).toFixed(feeBps % 100 === 0 ? 0 : 1);
 
   const draftWithAgent = async () => {
     if (brief.trim().length < 8) {
@@ -243,8 +255,27 @@ export default function HoldBountyDialog({
           <p className="font-eldritch text-2xl font-bold mt-1">
             {requiredEscrow.toLocaleString()} {token}
           </p>
-          <p className="font-mono text-[10px] uppercase text-earn-gray-600 mt-1">
+
+          <div className="mt-3 space-y-1 border-t border-earn-gray-300/70 pt-3 font-mono text-[10px] uppercase text-earn-gray-700">
+            <div className="flex justify-between gap-3">
+              <span>Scout payouts · {reward} × {target}</span>
+              <span className="tabular-nums">{baseEscrow.toLocaleString()} {token}</span>
+            </div>
+            {platformFee > 0 && (
+              <div className="flex justify-between gap-3">
+                <span>Platform premium · {feePct}%</span>
+                <span className="tabular-nums">+ {platformFee.toLocaleString()} {token}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-3 pt-1 border-t border-earn-gray-300/70 font-bold text-earn-ink">
+              <span>You deposit</span>
+              <span className="tabular-nums">{requiredEscrow.toLocaleString()} {token}</span>
+            </div>
+          </div>
+
+          <p className="font-mono text-[10px] uppercase text-earn-gray-600 mt-3">
             Locked on-chain until verified sales pay out scouts.
+            {platformFee > 0 && ' Premium funds protocol verification + dispute coverage.'}
           </p>
         </div>
 
